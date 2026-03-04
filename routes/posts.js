@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { Schema } = require("mongoose");
+
 const postSchema = new mongoose.Schema({
     title: {
         type: String,
@@ -20,4 +21,5 @@ const postSchema = new mongoose.Schema({
         ref: "User",
     },
 }, { timestamps: true });
+
 module.exports = mongoose.model("Post", postSchema);
