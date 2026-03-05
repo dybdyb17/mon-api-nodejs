@@ -13,12 +13,14 @@ mongoose.connect(process.env.DATABASE_URL)
 
 const indexRouter = require("./routes/index");
 const AuthRouter = require("./routes/auth");
+const UsersRouter = require("./routes/users");
 const postsRouter = require("./routes/posts");
 
 app.use(express.json());
 
 app.use("/api", indexRouter);
 app.use("/api/auth", AuthRouter);
+app.use("/api/users", UsersRouter);
 app.use("/api/posts", postsRouter);
 
 app.listen(port, () => {

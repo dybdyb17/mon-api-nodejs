@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 
 const usersSeed = require("../fixtures/users.seed");
 const postsSeed = require("../fixtures/posts.seed");
+const { fakerEN_GB } = require("@faker-js/faker");
 
 const loadFixtures = async () => {
     await mongoose.connect(process.env.DATABASE_URL);
@@ -13,6 +14,7 @@ const loadFixtures = async () => {
     console.log("Fixtures load sucessfully.");
 
     await mongoose.disconnect();
+
 };
 
 loadFixtures();
