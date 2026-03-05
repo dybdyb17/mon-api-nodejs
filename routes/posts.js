@@ -3,6 +3,7 @@ const router = express.Router();
 
 const authService = require("../middlewares/authService");
 const Post = require("../models/Post");
+const Comment = require("../models/Comment");
 
 router.get("/", async (req, res) => {
     const page = parseInt(req.query.page) || 1;
@@ -15,8 +16,8 @@ router.get("/", async (req, res) => {
                 .sort({ "createdAt": -1 })
                 .skip(offset)
                 .limit(size)
-                .lean(),
-            Post.countDocuments(),
+                .lean() // plus performant si pas besoin des méthodes mongoose pour nos objets
+            , Post.countDocuments(),
         ]);
 
         return res.status(200).json({
@@ -51,10 +52,11 @@ router.post("/new", authService.verifyToken, async (req, res) => {
         });
 
     } catch (err) {
+
         if (err.name === "ValidationError") {
             const validations = Object.values(err.errors).map(e => ({
                 message: e.message,
-                field: e.path,
+                field: e.path, // correspond au champ Mongoose (title, content, etc.)
             }));
 
             return res.status(400).json({
@@ -75,11 +77,43 @@ router.post("/new", authService.verifyToken, async (req, res) => {
     }
 });
 
-router.patch("/:id/edit", authService.verifyToken, async (req, res) => {
+router.get("/:id", async (req, res) => {
     const { id } = req.params;
 
     try {
-        let post = await Post.findById(id).lean();
+        const post = await Post.findById(id);
+        const comment = await Comment.find({ _postId: post._id });
+
+        if (!post) {
+            return res.status(404).json({
+                error: {
+                    code: "RESOURCE_NOT_FOUND",
+                    message: "Post not found",
+                },
+            });
+        }
+
+        return res.status(200).json({
+            post: post,
+            comment: comment,
+        });
+
+    } catch (err) {
+
+        return res.status(500).json({
+            error: {
+                code: "INTERNAL_SERVER_ERROR",
+                message: "An unexpected error occurred",
+            },
+        });
+    }
+});
+
+router.patch("/:id", authService.verifyToken, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        let post = await Post.findById(id);
 
         if (!post) {
             return res.status(404).json({
@@ -94,7 +128,7 @@ router.patch("/:id/edit", authService.verifyToken, async (req, res) => {
             return res.status(403).json({
                 error: {
                     code: "NOT_RESOURCE_OWNER",
-                    message: "You cannot modify this post",
+                    message: "You are not authorized to edit this post",
                 },
             });
         }
@@ -155,7 +189,7 @@ router.delete("/:id", authService.verifyToken, async (req, res) => {
             return res.status(403).json({
                 error: {
                     code: "NOT_RESOURCE_OWNER",
-                    message: "You cannot delete this post",
+                    message: "You are not authorized to delete this post",
                 },
             });
         }
@@ -168,7 +202,6 @@ router.delete("/:id", authService.verifyToken, async (req, res) => {
         });
 
     } catch (err) {
-
         return res.status(500).json({
             error: {
                 code: "INTERNAL_SERVER_ERROR",
