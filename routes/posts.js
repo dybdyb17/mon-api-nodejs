@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
+const sanitizeHtml = require("sanitize-html");
 
-const authService = require("../middlewares/authService");
-const Post = require("../models/Post");
-const Comment = require("../models/Comment");
+const authService = require("../middlewares/auth.service");
+const Post = require("../models/posts.models");
+const Comment = require("../models/comments.models");
 
 router.get("/", async (req, res) => {
     const page = parseInt(req.query.page) || 1;
@@ -12,8 +13,12 @@ router.get("/", async (req, res) => {
 
     try {
         const [posts, count] = await Promise.all([
-            Post.find()
+            Post.find({ "status": "Publish" })
                 .sort({ "createdAt": -1 })
+                .populate({
+                    path: "_userId",
+                    select: "username", // ou "username email" etc.
+                })
                 .skip(offset)
                 .limit(size)
                 .lean() // plus performant si pas besoin des méthodes mongoose pour nos objets
@@ -40,7 +45,17 @@ router.post("/new", authService.verifyToken, async (req, res) => {
     const { title, content, status } = req.body;
 
     try {
-        const post = Post({ title, content, status });
+        const clean = sanitizeHtml(content, {
+            allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+                "img", "h1", "h2", "h3", "pre", "code",
+            ]),
+            allowedAttributes: {
+                a: ["href", "name", "target"],
+                img: ["src", "alt"],
+            },
+        });
+
+        const post = Post({ title, content: clean, status });
         await post.validate();
 
         post._userId = req.userId;
@@ -49,6 +64,7 @@ router.post("/new", authService.verifyToken, async (req, res) => {
         return res.status(201).json({
             success: true,
             message: "Post created successfully",
+            post: post,
         });
 
     } catch (err) {
@@ -81,8 +97,10 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
 
     try {
-        const post = await Post.findById(id);
-        const comment = await Comment.find({ _postId: post._id });
+        const post = await Post.findById(id).populate({
+            path: "_userId",
+            select: "username", // ou "username email" etc.
+        });
 
         if (!post) {
             return res.status(404).json({
@@ -93,9 +111,16 @@ router.get("/:id", async (req, res) => {
             });
         }
 
+        const comments = await Comment.find({ _postId: post._id })
+            .sort({ "createdAt": -1 })
+            .populate({
+                path: "_userId",
+                select: "username",
+            });
+
         return res.status(200).json({
             post: post,
-            comment: comment,
+            comments: comments,
         });
 
     } catch (err) {
@@ -128,7 +153,19 @@ router.patch("/:id", authService.verifyToken, async (req, res) => {
             return res.status(403).json({
                 error: {
                     code: "NOT_RESOURCE_OWNER",
-                    message: "You are not authorized to edit this post",
+                    message: "You cannot modify this post",
+                },
+            });
+        }
+
+        if (req.body && req.body.content) {
+            req.body.content = sanitizeHtml(req.body.content, {
+                allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+                    "img", "h1", "h2", "h3", "pre", "code",
+                ]),
+                allowedAttributes: {
+                    a: ["href", "name", "target"],
+                    img: ["src", "alt"],
                 },
             });
         }
@@ -189,7 +226,7 @@ router.delete("/:id", authService.verifyToken, async (req, res) => {
             return res.status(403).json({
                 error: {
                     code: "NOT_RESOURCE_OWNER",
-                    message: "You are not authorized to delete this post",
+                    message: "You cannot delete this post",
                 },
             });
         }
@@ -202,6 +239,7 @@ router.delete("/:id", authService.verifyToken, async (req, res) => {
         });
 
     } catch (err) {
+
         return res.status(500).json({
             error: {
                 code: "INTERNAL_SERVER_ERROR",
