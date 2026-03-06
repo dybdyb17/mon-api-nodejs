@@ -2,9 +2,9 @@ const express = require("express");
 const router = express.Router();
 const sanitizeHtml = require("sanitize-html");
 
-const authService = require("../middlewares/auth.service");
-const Post = require("../models/posts.models");
-const Comment = require("../models/comments.models");
+const authService = require("../middlewares/authService");
+const Post = require("../models/Post");
+const Comment = require("../models/Comment");
 
 router.get("/", async (req, res) => {
     const page = parseInt(req.query.page) || 1;
@@ -17,12 +17,12 @@ router.get("/", async (req, res) => {
                 .sort({ "createdAt": -1 })
                 .populate({
                     path: "_userId",
-                    select: "username", // ou "username email" etc.
+                    select: "name",
                 })
                 .skip(offset)
                 .limit(size)
-                .lean() // plus performant si pas besoin des méthodes mongoose pour nos objets
-            , Post.countDocuments(),
+                .lean(),
+            Post.countDocuments(),
         ]);
 
         return res.status(200).json({
@@ -30,7 +30,7 @@ router.get("/", async (req, res) => {
             meta: { page, size, count },
         });
 
-    } catch (err) {
+    } catch {
 
         return res.status(500).json({
             error: {
@@ -72,7 +72,7 @@ router.post("/new", authService.verifyToken, async (req, res) => {
         if (err.name === "ValidationError") {
             const validations = Object.values(err.errors).map(e => ({
                 message: e.message,
-                field: e.path, // correspond au champ Mongoose (title, content, etc.)
+                field: e.path,
             }));
 
             return res.status(400).json({
@@ -99,7 +99,7 @@ router.get("/:id", async (req, res) => {
     try {
         const post = await Post.findById(id).populate({
             path: "_userId",
-            select: "username", // ou "username email" etc.
+            select: "name",
         });
 
         if (!post) {
@@ -115,7 +115,7 @@ router.get("/:id", async (req, res) => {
             .sort({ "createdAt": -1 })
             .populate({
                 path: "_userId",
-                select: "username",
+                select: "name",
             });
 
         return res.status(200).json({
@@ -123,7 +123,7 @@ router.get("/:id", async (req, res) => {
             comments: comments,
         });
 
-    } catch (err) {
+    } catch {
 
         return res.status(500).json({
             error: {
@@ -186,7 +186,7 @@ router.patch("/:id", authService.verifyToken, async (req, res) => {
         if (err.name === "ValidationError") {
             const validations = Object.values(err.errors).map(e => ({
                 message: e.message,
-                field: e.path, // correspond au champ Mongoose (title, content, etc.)
+                field: e.path,
             }));
 
             return res.status(400).json({
@@ -238,7 +238,7 @@ router.delete("/:id", authService.verifyToken, async (req, res) => {
             message: "Post deleted successfully",
         });
 
-    } catch (err) {
+    } catch {
 
         return res.status(500).json({
             error: {

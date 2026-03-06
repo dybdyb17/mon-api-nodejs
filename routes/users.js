@@ -3,7 +3,7 @@ const router = express.Router();
 
 
 const User = require("../models/User");
-const authService = require("../middlewares/auth.service");
+const authService = require("../middlewares/authService");
 
 router.get("/", async (req, res) => {
     const page = parseInt(req.query.page) || 1;
@@ -26,7 +26,7 @@ router.get("/", async (req, res) => {
             meta: { page, size, count },
         });
 
-    } catch (err) {
+    } catch {
 
         return res.status(500).json({
             error: {
@@ -54,7 +54,7 @@ router.get("/profile", authService.verifyToken, async (req, res) => {
 
         return res.status(200).json(user);
 
-    } catch (err) {
+    } catch {
 
         return res.status(500).json({
             error: {
@@ -84,7 +84,7 @@ router.get("/:id", async (req, res) => {
 
         return res.status(200).json(user);
 
-    } catch (err) {
+    } catch {
 
         return res.status(500).json({
             error: {
