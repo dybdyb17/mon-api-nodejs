@@ -7,7 +7,7 @@ const seedUsers = async () => {
 
     const usersData = await Promise.all(
         Array.from({ length: 25 }).map(async () => ({
-            name: faker.person.fullName(),
+            username: faker.person.fullName(),
             email: faker.internet.email().toLowerCase(),
             password: await bcrypt.hash("password123", 10),
         })),
