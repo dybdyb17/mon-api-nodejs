@@ -36,7 +36,7 @@ L'objectif spécifique du document est de permettre à une nouvelle équipe tech
 - [Documentation API v1.0.0][2]
 
 [1]: ./functional_documentation.md
-[2]: https://postman.com
+[2]: https://documenter.getpostman.com/view/25217004/2sBXiesZip
 
 ## 2. ARCHITECTURE GENERALE
 
